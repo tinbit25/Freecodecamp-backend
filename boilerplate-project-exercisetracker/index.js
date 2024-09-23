@@ -13,9 +13,9 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html'); // Make sure the file exists
 });
 app.use(express.static('public'))
-// MongoDB connection
+
 mongoose.connect(process.env.MONGO_URI)
-// Create Schemas and Models
+
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
 });
@@ -31,7 +31,7 @@ const exerciseSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Exercise = mongoose.model('Exercise', exerciseSchema);
 
-// POST /api/users - Create a new user
+//Create a new user
 app.post('/api/users', async (req, res) => {
   try {
     const newUser = new User({ username: req.body.username });
@@ -42,7 +42,7 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// GET /api/users - Get all users
+//Get all users
 app.get('/api/users', async (req, res) => {
   try {
     const users = await User.find();
@@ -52,7 +52,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// POST /api/users/:_id/exercises - Add exercise to user
+// Add exercise to user
 app.post('/api/users/:_id/exercises', async (req, res) => {
   try {
     const { _id } = req.params;
@@ -61,7 +61,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
     const { description, duration, date } = req.body;
 
-    // Use current date if no date is provided
+
     const exerciseDate = date ? new Date(date) : new Date();
 
     const newExercise = new Exercise({
@@ -73,22 +73,19 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
     const savedExercise = await newExercise.save();
     
-    // Return the response in the correct format
     res.json({
       username: user.username,
       description: savedExercise.description,
       duration: savedExercise.duration,
       date: savedExercise.date.toDateString(), // Ensure this is a string
-      _id: savedExercise._id,
+      _id: user._id, // Return the user's ID
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-
-
-// GET /api/users/:_id/logs - Get exercise logs for user
+// Get exercise logs for user
 app.get('/api/users/:_id/logs', async (req, res) => {
   try {
     const user = await User.findById(req.params._id);
@@ -98,7 +95,6 @@ app.get('/api/users/:_id/logs', async (req, res) => {
 
     const logsQuery = { userId: user._id };
     
-    // Filter by 'from' and 'to' dates if provided
     if (from) {
       logsQuery.date = { $gte: new Date(from) }; // Use Date objects for comparison
     }
@@ -109,10 +105,9 @@ app.get('/api/users/:_id/logs', async (req, res) => {
       };
     }
 
-    // Find logs with optional limit
+    
     const logs = await Exercise.find(logsQuery).limit(Number(limit) || 0);
 
-    // Return logs with properly formatted date strings
     res.json({
       username: user.username,
       count: logs.length,
@@ -120,7 +115,7 @@ app.get('/api/users/:_id/logs', async (req, res) => {
       log: logs.map(log => ({
         description: log.description,
         duration: log.duration,
-        date: log.date.toDateString(), // Format date as string
+        date: log.date.toDateString(),
       })),
     });
   } catch (err) {
@@ -130,7 +125,6 @@ app.get('/api/users/:_id/logs', async (req, res) => {
 
 
 
-// Start the server
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port);
 });
